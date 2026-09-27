@@ -1,0 +1,53 @@
+---
+# Webserver Role - Install and Configure Apache + PHP
+
+- name: "Install Apache and dependencies"
+  ansible.builtin.shell: |
+    yum install -y httpd mysql python3-pip
+  tags: install
+
+- name: "Install PHP packages"
+  ansible.builtin.shell: |
+    yum install -y php php-mysqlnd php-cli php-json
+  tags: install
+
+- name: "Install boto3"
+  ansible.builtin.shell: |
+    pip3 install boto3
+  ignore_errors: yes
+  tags: install
+
+- name: "Start and enable Apache"
+  ansible.builtin.service:
+    name: httpd
+    state: started
+    enabled: yes
+  tags: service
+
+- name: "Deploy e-commerce application"
+  ansible.builtin.template:
+    src: index.php.j2
+    dest: /var/www/html/index.php
+    owner: apache
+    group: apache
+    mode: '0644'
+  notify: restart apache
+  tags: deploy
+
+- name: "Configure PHP handler"
+  ansible.builtin.copy:
+    content: |
+      <FilesMatch \.php$>
+          SetHandler application/x-httpd-php
+      </FilesMatch>
+      DirectoryIndex index.php index.html
+    dest: /etc/httpd/conf.d/php.conf
+    mode: '0644'
+  notify: restart apache
+  tags: configure
+
+- name: "Ensure Apache is running"
+  ansible.builtin.service:
+    name: httpd
+    state: started
+  tags: verify

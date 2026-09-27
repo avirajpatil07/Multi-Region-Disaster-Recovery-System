@@ -1,0 +1,32 @@
+---
+# Project Settings
+project_name: "dr-ecom-v2"
+app_environment: "production"
+
+# Application Settings
+app_user: "ec2-user"
+web_root: "/var/www/html"
+app_name: "DR E-commerce Store"
+
+# Database Settings
+db_name: "ecommerce"
+db_user: "admin"
+db_password: "SecurePass123!"
+
+# Backup Settings
+backup_region: "us-west-2"
+backup_schedule: "0 2 * * *"  # 2 AM every night
+
+# Web Server Settings
+http_port: 80
+php_packages:
+  - php
+  - php-mysqlnd
+  - php-cli
+  - php-json
+
+web_packages:
+  - httpd
+  - mysql
+  - python3
+  - python3-pip

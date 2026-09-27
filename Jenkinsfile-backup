@@ -1,0 +1,62 @@
+pipeline {
+    agent any
+    
+    environment {
+        PROJECT_DIR = "${WORKSPACE}/dr-system-v2"
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo '📥 Checking out code...'
+                sh '''
+                    if [ ! -d "$PROJECT_DIR" ]; then
+                        git clone https://github.com/YOUR_USERNAME/dr-system-v2.git $PROJECT_DIR
+                    else
+                        cd $PROJECT_DIR
+                        git pull origin main
+                    fi
+                '''
+            }
+        }
+        
+        stage('Run Backup') {
+            steps {
+                echo '💾 Running database backup...'
+                sh '''
+                    cd $PROJECT_DIR/scripts
+                    chmod +x run_backup.sh
+                    ./run_backup.sh
+                '''
+            }
+        }
+        
+        stage('Verify Backup') {
+            steps {
+                echo '✅ Verifying backup in S3...'
+                sh '''
+                    cd $PROJECT_DIR/terraform/backup
+                    BACKUP_BUCKET=$(terraform output -raw db_backup_bucket)
+                    
+                    LATEST_BACKUP=$(aws s3 ls s3://$BACKUP_BUCKET/database/ --region us-west-2 | tail -1)
+                    
+                    if [ -z "$LATEST_BACKUP" ]; then
+                        echo "❌ No backup found!"
+                        exit 1
+                    fi
+                    
+                    echo "✅ Latest backup: $LATEST_BACKUP"
+                '''
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo '✅ Backup completed successfully!'
+        }
+        failure {
+            echo '❌ Backup failed!'
+        }
+    }
+}

@@ -1,0 +1,43 @@
+---
+# Main Deployment Playbook
+
+- name: "DR E-commerce - Full Deployment"
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  vars:
+    db_endpoint: "{{ db_endpoint }}"
+    aws_region: "{{ aws_region }}"
+
+  pre_tasks:
+    - name: "Display deployment information"
+      debug:
+        msg:
+          - "======================================"
+          - "Deploying to: {{ inventory_hostname }}"
+          - "Host: {{ ansible_host }}"
+          - "Region: {{ aws_region }}"
+          - "Environment: {{ app_environment }}"
+          - "======================================"
+
+  roles:
+    - webserver
+
+  post_tasks:
+    - name: "Verify website is accessible"
+      uri:
+        url: "http://{{ ansible_host }}/index.php"
+        status_code: 200
+      delegate_to: localhost
+      ignore_errors: yes
+      register: site_check
+
+    - name: "Show deployment result"
+      debug:
+        msg:
+          - "======================================"
+          - "✅ Deployment Complete!"
+          - "URL: http://{{ ansible_host }}/index.php"
+          - "Status: {{ site_check.status | default('unknown') }}"
+          - "======================================"

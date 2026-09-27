@@ -1,0 +1,28 @@
+---
+# Backup Playbook
+# Usage: ansible-playbook playbooks/backup.yml -i inventory/hosts.ini
+
+- name: "DR E-commerce - Run Backup"
+  hosts: primary
+  become: yes
+
+  tasks:
+    - name: "Check backup script exists"
+      stat:
+        path: /tmp/backup_database.py
+      register: backup_script
+
+    - name: "Copy backup script if missing"
+      copy:
+        src: "{{ playbook_dir }}/../scripts/backup_database.py"
+        dest: /tmp/backup_database.py
+        mode: '0755'
+      when: not backup_script.stat.exists
+
+    - name: "Run database backup"
+      command: python3 /tmp/backup_database.py
+      register: backup_output
+
+    - name: "Show backup result"
+      debug:
+        var: backup_output.stdout_lines

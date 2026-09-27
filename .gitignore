@@ -1,0 +1,63 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+*.tfvars
+crash.log
+override.tf
+override.tf.json
+
+# Ansible
+*.retry
+.vault_pass
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# AWS
+.aws/
+*.pem
+*.key
+
+# Secrets
+secrets/
+credentials
+*.secret
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+/terraform/dr-restore/
+*.backup
+*.tmp
+
+# Node modules (if using)
+node_modules/
+
+# Jenkins
+.jenkins/

@@ -1,0 +1,46 @@
+---
+# Health Check Playbook
+# Usage: ansible-playbook playbooks/healthcheck.yml -i inventory/hosts.ini
+
+- name: "DR E-commerce - Health Check"
+  hosts: webservers
+  become: yes
+  ignore_unreachable: yes
+
+  tasks:
+    - name: "Check Apache status"
+      service:
+        name: httpd
+        state: started
+      register: apache_status
+      ignore_errors: yes
+
+    - name: "Check PHP is working"
+      command: php -v
+      register: php_version
+      ignore_errors: yes
+
+    - name: "Check MySQL client"
+      command: mysql --version
+      register: mysql_version
+      ignore_errors: yes
+
+    - name: "Check disk space"
+      shell: df -h / | tail -1 | awk '{print $5}'
+      register: disk_usage
+
+    - name: "Check memory"
+      shell: free -m | awk 'NR==2{print $3"MB used of "$2"MB"}'
+      register: memory_usage
+
+    - name: "Print health report"
+      debug:
+        msg:
+          - "========== HEALTH REPORT =========="
+          - "Server: {{ inventory_hostname }}"
+          - "Apache: {{ 'RUNNING ✅' if apache_status.state == 'started' else 'DOWN ❌' }}"
+          - "PHP: {{ php_version.stdout_lines[0] | default('Not found') }}"
+          - "MySQL: {{ mysql_version.stdout | default('Not found') }}"
+          - "Disk: {{ disk_usage.stdout }} used"
+          - "Memory: {{ memory_usage.stdout }}"
+          - "==================================="

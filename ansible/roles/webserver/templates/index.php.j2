@@ -1,0 +1,250 @@
+<?php
+// Configuration - injected by Ansible
+$db_host = "{{ db_endpoint }}";
+$db_name = "{{ db_name }}";
+$db_user = "{{ db_user }}";
+$db_pass = "{{ db_password }}";
+$region  = "{{ aws_region }}";
+$env     = "{{ environment }}";
+
+// Connect using MySQLi
+$conn = mysqli_connect($db_host, $db_user, $db_pass, $db_name);
+
+if ($conn) {
+    // Create table if not exists
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS products (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        price DECIMAL(10,2) NOT NULL,
+        stock INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
+    // Insert sample data if empty
+    $result = mysqli_query($conn, "SELECT COUNT(*) as count FROM products");
+    $row = mysqli_fetch_assoc($result);
+
+    if ($row['count'] == 0) {
+        mysqli_query($conn, "INSERT INTO products (name, price, stock) VALUES
+            ('Gaming Laptop', 1299.99, 15),
+            ('Wireless Mouse', 29.99, 50),
+            ('Mechanical Keyboard', 89.99, 30),
+            ('4K Monitor', 399.99, 20),
+            ('USB-C Hub', 49.99, 45),
+            ('Webcam HD', 79.99, 25),
+            ('Headphones', 149.99, 35),
+            ('External SSD 1TB', 129.99, 40)
+        ");
+    }
+
+    $result   = mysqli_query($conn, "SELECT * FROM products ORDER BY id");
+    $products = mysqli_fetch_all($result, MYSQLI_ASSOC);
+    $db_status = "Connected ✓";
+} else {
+    $db_status = "Error: " . mysqli_connect_error();
+    $products  = [];
+}
+
+// Set theme based on environment
+$theme_color = ($env == 'dr-restored') ? '#f5576c' : '#667eea';
+$theme_gradient = ($env == 'dr-restored')
+    ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ app_name }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: <?php echo $theme_gradient; ?>;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .alert-dr {
+            display: <?php echo ($env == 'dr-restored') ? 'block' : 'none'; ?>;
+            background: #28a745;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .alert-ansible {
+            background: #17a2b8;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        .header {
+            background: <?php echo $theme_gradient; ?>;
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p  { font-size: 1.2em; opacity: 0.9; }
+        .info-panel {
+            background: #f8f9fa;
+            padding: 20px 40px;
+            border-bottom: 3px solid <?php echo $theme_color; ?>;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .info-item {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .info-label {
+            font-weight: bold;
+            color: <?php echo $theme_color; ?>;
+            font-size: 0.85em;
+            text-transform: uppercase;
+        }
+        .info-value { color: #333; font-size: 1em; margin-top: 5px; }
+        .status-ok    { color: #28a745; font-weight: bold; }
+        .status-error { color: #dc3545; font-weight: bold; }
+        .products-section { padding: 40px; }
+        .products-section h2 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2em;
+            text-align: center;
+        }
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+        }
+        .product-card {
+            border: 2px solid #e0e0e0;
+            padding: 25px;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+            border-color: <?php echo $theme_color; ?>;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        .product-name  { font-size: 1.3em; font-weight: bold; color: #333; margin-bottom: 10px; }
+        .product-price { color: <?php echo $theme_color; ?>; font-weight: bold; font-size: 1.8em; }
+        .product-stock {
+            background: #f0f4ff;
+            color: #555;
+            padding: 6px 12px;
+            border-radius: 20px;
+            display: inline-block;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        .footer {
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            color: #666;
+            border-top: 3px solid <?php echo $theme_color; ?>;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin: 2px;
+        }
+        .badge-ansible  { background: #17a2b8; color: white; }
+        .badge-terraform{ background: #7b42bc; color: white; }
+        .badge-aws      { background: #ff9900; color: white; }
+        .badge-python   { background: #3776ab; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="alert-dr">
+            ✅ SITE SUCCESSFULLY RESTORED FROM BACKUP - Running in DR Region!
+        </div>
+        <div class="alert-ansible">
+            ⚙️ Deployed & Configured by Ansible | {{ project_name }}
+        </div>
+
+        <div class="header">
+            <h1>🛒 {{ app_name }}</h1>
+            <p>Multi-Region Disaster Recovery System</p>
+        </div>
+
+        <div class="info-panel">
+            <div class="info-item">
+                <div class="info-label">🖥️ Server</div>
+                <div class="info-value"><?php echo gethostname(); ?></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">🌍 Region</div>
+                <div class="info-value"><?php echo $region; ?></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">🔧 Environment</div>
+                <div class="info-value"><?php echo strtoupper($env); ?></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">💾 Database</div>
+                <div class="info-value <?php echo ($db_status == 'Connected ✓') ? 'status-ok' : 'status-error'; ?>">
+                    <?php echo htmlspecialchars($db_status); ?>
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">🕐 Last Updated</div>
+                <div class="info-value"><?php echo date('Y-m-d H:i:s'); ?></div>
+            </div>
+        </div>
+
+        <div class="products-section">
+            <h2>📦 Available Products</h2>
+            <?php if (empty($products)): ?>
+                <div style="text-align:center;padding:60px;color:#999;">
+                    <p style="font-size:1.3em;">⚠️ No products available</p>
+                </div>
+            <?php else: ?>
+                <div class="products-grid">
+                    <?php foreach($products as $product): ?>
+                    <div class="product-card">
+                        <div class="product-name"><?php echo htmlspecialchars($product['name']); ?></div>
+                        <div class="product-price">$<?php echo number_format($product['price'], 2); ?></div>
+                        <div class="product-stock">
+                            📦 <?php echo $product['stock']; ?> in stock
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="footer">
+            <p style="font-weight:bold;margin-bottom:10px;">🚀 DR E-commerce - DevOps Project</p>
+            <div>
+                <span class="badge badge-ansible">Ansible</span>
+                <span class="badge badge-terraform">Terraform</span>
+                <span class="badge badge-aws">AWS</span>
+                <span class="badge badge-python">Python</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+<?php if ($conn) mysqli_close($conn); ?>

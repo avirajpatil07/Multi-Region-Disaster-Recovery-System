@@ -1,0 +1,71 @@
+pipeline {
+    agent any
+    
+    parameters {
+        booleanParam(name: 'STOP_PRIMARY', defaultValue: false, description: 'Stop primary servers?')
+        booleanParam(name: 'RUN_RESTORE', defaultValue: true, description: 'Run restore to DR region?')
+    }
+    
+    stages {
+        stage('Backup Before Test') {
+            steps {
+                echo '💾 Taking fresh backup before DR test...'
+                build job: 'DR-Backup', wait: true
+            }
+        }
+        
+        stage('Simulate Disaster') {
+            when {
+                expression { params.STOP_PRIMARY == true }
+            }
+            steps {
+                echo '🔥 Simulating disaster - stopping primary...'
+                sh '''
+                    cd ~/dr-system-v2/scripts
+                    echo "yes" | ./simulate_disaster.sh
+                '''
+            }
+        }
+        
+        stage('Restore to DR Region') {
+            when {
+                expression { params.RUN_RESTORE == true }
+            }
+            steps {
+                echo '🚀 Restoring to us-west-2...'
+                sh '''
+                    cd ~/dr-system-v2/scripts
+                    ./restore_from_backup.sh
+                '''
+            }
+        }
+        
+        stage('Verify DR Site') {
+            steps {
+                echo '✅ Verifying DR site is accessible...'
+                sh '''
+                    cd ~/dr-system-v2/terraform/dr-restore
+                    DR_IP=$(terraform output -raw web_public_ip)
+                    
+                    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://$DR_IP/index.php)
+                    
+                    if [ "$HTTP_CODE" = "200" ]; then
+                        echo "✅ DR site is UP! (HTTP $HTTP_CODE)"
+                    else
+                        echo "❌ DR site is DOWN! (HTTP $HTTP_CODE)"
+                        exit 1
+                    fi
+                '''
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo '✅ DR Test passed!'
+        }
+        failure {
+            echo '❌ DR Test failed!'
+        }
+    }
+}
